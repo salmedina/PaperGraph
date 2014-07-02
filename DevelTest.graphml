@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?><graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <key attr.name="Authors" attr.type="string" for="node" id="d1" />
+  <key attr.name="Title" attr.type="string" for="node" id="d0" />
+  <graph edgedefault="undirected">
+    <node id="1">
+      <data key="d0">MoSIFT: Recognizing Human Actions in Surveillance Videos</data>
+      <data key="d1">Ming-yu Chen, Alex Hauptmann</data>
+    </node>
+    <node id="2">
+      <data key="d0">Space-time interest points</data>
+      <data key="d1">I Laptev, T Lindeberg</data>
+    </node>
+    <node id="3">
+      <data key="d0">Recognizing human actions: A local svm approach</data>
+      <data key="d1">C Schuldt, I Laptev, B Caputo</data>
+    </node>
+    <node id="4">
+      <data key="d0">Efficient visual event detection using volumetric features</data>
+      <data key="d1">Y Ke, R Sukthankar, M Hebert</data>
+    </node>
+    <node id="5">
+      <data key="d0">Behavior Recognition via Sparse Spatio-Temporal Features</data>
+      <data key="d1">P Dollr, V Rabaud, G Gottrell, S Belongie</data>
+    </node>
+    <node id="6">
+      <data key="d0">Unsupervised learning of human action categories using spatial-temporal words</data>
+      <data key="d1">J C Nibles, H Wang, L F-F Li</data>
+    </node>
+    <node id="7">
+      <data key="d0">Extracting spatiotemporal interest points using global information</data>
+      <data key="d1">S-F Wong, R Cipolla</data>
+    </node>
+    <node id="8">
+      <data key="d0">Spatiotemporal salient points for visual recognition of human actions</data>
+      <data key="d1">A Oikonomopoulos, I Patras, M Pantic</data>
+    </node>
+    <node id="9">
+      <data key="d0">Institute of Standards and Technology (NIST): TRECVID 2008 Evaluation for Surveillance Event Detection</data>
+      <data key="d1">National</data>
+    </node>
+    <node id="10">
+      <data key="d0">Distinctive image features from scale invariant key points</data>
+      <data key="d1">D G Lowe</data>
+    </node>
+    <node id="11">
+      <data key="d0">Learning realistic human actions from movies</data>
+      <data key="d1">I Laptev, M Marszaek, C Schmid, B Rozenfeld</data>
+    </node>
+    <node id="12">
+      <data key="d0">Action Snippets: How many frames does human action recognition require</data>
+      <data key="d1">K Schindler, L V Gool</data>
+    </node>
+    <node id="13">
+      <data key="d0">Local features and kernels for classification of texture and object categories: A comprehensive study</data>
+      <data key="d1">J Zhang, M Marszaek, S Lazebnik, C Schmid</data>
+    </node>
+    <node id="14">
+      <data key="d0">Using Bigrams in Text Categorization</data>
+      <data key="d1">R Bekkerman, J Allan</data>
+    </node>
+    <node id="15">
+      <data key="d0">Discriminative object class models of appearance and shape by correlations</data>
+      <data key="d1">S Savarese, J Winn, A Criminisi</data>
+    </node>
+    <node id="16">
+      <data key="d0">Spatial-temporal correlations for unsupervised action classification</data>
+      <data key="d1">S Savarese, A D Pozo, J C Niebles, F-F Li</data>
+    </node>
+    <node id="17">
+      <data key="d0">Learning to detect objects in images via a sparse, part-based representation</data>
+      <data key="d1">S Agarwal, A Awan, Roth D 2004</data>
+    </node>
+    <node id="18">
+      <data key="d0">Recognition of Aggressive Human Behavior Using Binary Local Motion Descriptors</data>
+      <data key="d1">C Chen, H Wactlar, M-Y Chen, G Can, A Bharucha, A Hauptmann</data>
+    </node>
+    <node id="19">
+      <data key="d0">Informedia @ TRECVID2008: Exploring New Frontiers TRECVID Video Retrieval Evaluation Workshop</data>
+      <data key="d1">A Hauptmann, R V Baron, M Chen, M Christel, W-H Lin, X Sun, V Valdes, J Yang, L Mummert, S Schlosser</data>
+    </node>
+    <edge source="1" target="2" />
+    <edge source="1" target="3" />
+    <edge source="1" target="4" />
+    <edge source="1" target="5" />
+    <edge source="1" target="6" />
+    <edge source="1" target="7" />
+    <edge source="1" target="8" />
+    <edge source="1" target="9" />
+    <edge source="1" target="10" />
+    <edge source="1" target="11" />
+    <edge source="1" target="12" />
+    <edge source="1" target="13" />
+    <edge source="1" target="14" />
+    <edge source="1" target="15" />
+    <edge source="1" target="16" />
+    <edge source="1" target="17" />
+    <edge source="1" target="18" />
+    <edge source="1" target="19" />
+  </graph>
+</graphml>
