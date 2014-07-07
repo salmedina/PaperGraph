@@ -7,6 +7,9 @@ page. It is not a recursive crawler.
 # ChangeLog
 # ---------
 #
+# 2.5:  Additional features:
+#       - 
+#
 # 2.4:  Bugfixes:
 #
 #       - Correctly handle Unicode characters when reporting results
@@ -382,13 +385,19 @@ class ScholarArticleParser(object):
         """
         This predicate function checks whether a BeatifulSoup Tag instance
         has a class attribute.
+        Changed the policy to a strict match and not just the search of a term 
+        in the class
         """
         res = tag.get('class') or []
+
+        """
+        # 
         if type(res) != list:
             # BeautifulSoup 3 can return e.g. 'gs_md_wp gs_ttss',
             # so split -- conveniently produces a list in any case
             res = res.split()
-        return klass in res
+        """
+        return klass == ' '.join(res)
 
     @staticmethod
     def _tag_checker(tag):
@@ -459,6 +468,7 @@ class ScholarArticleParser120726(ScholarArticleParser):
         for tag in div:
             if not hasattr(tag, 'name'):
                 continue
+
             if str(tag).lower().find('.pdf'):
                 if tag.find('div', {'class': 'gs_ttss'}):
                     self._parse_links(tag.find('div', {'class': 'gs_ttss'}))
@@ -505,6 +515,67 @@ class ScholarArticleParser120726(ScholarArticleParser):
                 if tag.find('div', {'class': 'gs_fl'}):
                     self._parse_links(tag.find('div', {'class': 'gs_fl'}))
 
+class ScholarArticleParser140703(ScholarArticleParser):
+    """
+    This class reflects update made by Zal to obtain direct file download
+    links modified on 07/03/14.
+    """
+    def _parse_article(self, div):
+        self.article = ScholarArticle()
+
+        for tag in div:
+            if not hasattr(tag, 'name'):
+                continue
+
+            if str(tag).lower().find('.pdf'):
+                if tag.find('div', {'class': 'gs_ttss'}):
+                    self._parse_links(tag.find('div', {'class': 'gs_ttss'}))
+
+            if tag.name == 'div' and self._tag_has_class(tag, 'gs_ri'):
+                # There are (at least) two formats here. In the first
+                # one, we have a link, e.g.:
+                #
+                # <h3 class="gs_rt">
+                #   <a href="http://dl.acm.org/citation.cfm?id=972384" class="yC0">
+                #     <b>Honeycomb</b>: creating intrusion detection signatures using
+                #        honeypots
+                #   </a>
+                # </h3>
+                #   
+                # In the other, there's no actual link -- it's what
+                # Scholar renders as "CITATION" in the HTML:
+                #
+                # <h3 class="gs_rt">
+                #   <span class="gs_ctu">
+                #     <span class="gs_ct1">[CITATION]</span>
+                #     <span class="gs_ct2">[C]</span>
+                #   </span>
+                #   <b>Honeycomb</b> automated ids signature creation using honeypots
+                # </h3>
+                #
+                # We now distinguish the two.
+                try:
+                    atag = tag.h3.a
+                    self.article['title'] = ''.join(atag.findAll(text=True))
+                    self.article['url'] = self._path2url(atag['href'])
+                    if self.article['url'].endswith('.pdf'):
+                        self.article['url_pdf'] = self.article['url']
+                except:
+                    # Remove a few spans that have unneeded content (e.g. [CITATION])
+                    for span in tag.h3.findAll(name='span'):
+                        span.clear()
+                    self.article['title'] = ''.join(tag.h3.findAll(text=True))
+
+                if tag.find('div', {'class': 'gs_a'}):
+                    year = self.year_re.findall(tag.find('div', {'class': 'gs_a'}).text)
+                    self.article['year'] = year[0] if len(year) > 0 else None
+
+                if tag.find('div', {'class': 'gs_fl'}):
+                    self._parse_links(tag.find('div', {'class': 'gs_fl'}))
+
+            if tag.name == 'div' and self._tag_has_class(tag, 'gs_ggs gs_fl'):
+                if tag.div.a:
+                    self.article['url_pdf'] = self._path2url(tag.div.a['href'])
 
 class ScholarQuery(object):
     """
@@ -719,9 +790,9 @@ class ScholarQuerier(object):
     # Older URLs:
     # ScholarConf.SCHOLAR_SITE + '/scholar?q=%s&hl=en&btnG=Search&as_sdt=2001&as_sdtp=on
 
-    class Parser(ScholarArticleParser120726):
+    class Parser(ScholarArticleParser140703):
         def __init__(self, querier):
-            ScholarArticleParser120726.__init__(self)
+            ScholarArticleParser140703.__init__(self)
             self.querier = querier
 
         def handle_article(self, art):

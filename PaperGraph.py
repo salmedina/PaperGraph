@@ -2,21 +2,26 @@
 
 # Imports
 import os
-from BeautifulSoup import BeautifulSoup
 import sys, getopt, re
 import urllib2
-import scholar
-import networkx as nx
+import time
 from Paper import *
+import networkx as nx
 import Scholar as sch
+import Stopwatch as sw
+from BeautifulSoup import BeautifulSoup
 
 # Globals
 PdfXURL 	= 'http://pdfx.cs.man.ac.uk'
 FreeCiteURL = 'http://freecite.library.brown.edu/citations/create'
-PdfRepository = '.\\PDFs'
-SeekDepth	= 4
-TitleGraph = nx.Graph()
+CachePath = os.path.join('.', 'cache')
+SeekDepth	= 3
+SeekLevel = 0
 CurNodeId = 1
+
+TitleGraph = nx.Graph()
+OutputGraphName = 'Devel.graphml'
+QueryChrono = sw.Stopwatch()
 
 # Fuctions
 def pdfToXml(pdfFile): #Full path to the pdf
@@ -30,7 +35,7 @@ def pdfToXml(pdfFile): #Full path to the pdf
 	try:
 		result = urllib2.urlopen(req)
 		xmlStr = result.read()
-		return True, xmlStr
+		return isValidPdfx(xmlStr), xmlStr
 	except urllib2.HTTPError as e:
 		error_message = e.read()
 		print error_message
@@ -47,8 +52,9 @@ def freeCiteParse(txt):
 	print 'Requesting FreeCite Parse %s' % txt
 	req = urllib2.Request(FreeCiteURL, data=formatFreeCiteRequestTxt(txt) ,headers = {'Accept':'text/xml'})
 	try:
-		res = urllib2.urlopen(req)
-		return True, res.read()
+		ans = urllib2.urlopen(req)
+		res = ans.read()
+		return isValidFCCitation(res), res
 	except urllib2.HTTPError as e:
 		error_message = e.read()
 		print "ERROR: FreeCite says " + error_message
@@ -68,13 +74,16 @@ def extractPdfxTitle(xmlStr):
 	soup = BeautifulSoup(xmlStr)
 	title = soup.findAll('article-title')
 	if len(title) > 0:
-		return title[0].contents[0].encode('ascii', 'ignore')
+		return title[0].string.encode('ascii', 'ignore')
 	return ""
 
 #TODO: def extractPdfxAbstract(xmlStr):
+def isValidPdfx(xmlStr):
+	soup = BeautifulSoup(xmlStr)
+	return soup.find('error') == None
 
 def isValidFCCitation(xmlStr):
-	soup = BeutifulSoup(xmlStr)
+	soup = BeautifulSoup(xmlStr)
 	return soup.find('citation', attrs={"valid" : "true"}) != None
 
 # Returns a list of authors from a FreeCite response
@@ -83,17 +92,18 @@ def extractFCAuths(xmlStr):
 	authors = soup.findAll('author')
 	authList = []
 	for author in authors:
-		print author
-		authList.append(author.contents[0])
+		authList.append(author.string)
 	return authList
 
 #Returns a the title of the article from a FreeCite response
 def extractFCTitle(xmlStr):
 	soup = BeautifulSoup(xmlStr)
 	title = soup.find('title')
-	return title.contents[0].encode('ascii', 'ignore')
+	return title.string.encode('ascii', 'ignore')
 
-def extractPdfxRefs(xmlStr):	#txt:pdf in XML
+# xmlStr is PDFX format
+# returns empty string if problem while parsing
+def extractPdfxRefs(xmlStr):
 	print 'Extracting references'
 	res = None
 
@@ -107,7 +117,18 @@ def extractPdfxRefs(xmlStr):	#txt:pdf in XML
 			title = extractFCTitle(refXML)
 			paper = Paper(authors, title, [])
 			refList.append(paper)
+		else:
+			print 'Oops, there was a problem with FC parse'
+			print refXML
 	return refList
+
+def getMainAuthor(authors):
+	if len(authors) < 1:
+		return 'Unknown'
+	return authors[0]
+
+def fileNameNoExt(filePath):
+	return os.path.basename(os.path.splitext(filePath)[0])
 
 def downloadFile(url, fileName):
 	try:
@@ -125,9 +146,31 @@ def downloadFile(url, fileName):
 	return True
 
 def formatPdfName(author, title):
+	global CachePath
 	ilegalChars = ":?\\/*<>|\""
-	pdfName = "[%s]-%s.pdf" % (author.translate(None, ilegalChars).replace(" ", "_"), title.translate(None, ilegalChars).replace(" ", "_"))
-	return pdfName
+
+	sAuthor = author.decode('unicode_escape').encode('ascii','ignore')
+	pdfName = "[%s]-%s.pdf" % (sAuthor.translate(None, ilegalChars).replace(" ", "_"), title.translate(None, ilegalChars).replace(" ", "_"))
+	
+	return os.path.join(CachePath, pdfName)
+
+def formatXmlName(author, title):
+	global CachePath
+	ilegalChars = ":?\\/*<>|\""
+
+	sAuthor = author.decode('unicode_escape').encode('ascii','ignore')
+	xmlName = "[%s]-%s.pdf" % (sAuthor.translate(None, ilegalChars).replace(" ", "_"), title.translate(None, ilegalChars).replace(" ", "_"))
+	
+	return os.path.join(CachePath, xmlName)
+
+def saveXMLToFile(xmlStr, filePath, overwrite):
+	if xmlStr and filePath and filePath != '':
+		if not os.path.isfile(filePath) or \
+				(os.path.isfile(filePath) and overwrite):
+			print 'Saving PDF annotations: %s' % filePath
+			xmlFile = open(filePath, 'w')
+			xmlFile.write(xmlStr)
+			xmlFile.close()
 
 def importPdf(pdfFile):
 	print '>>> Importing PDF -  %s'%pdfFile
@@ -136,22 +179,67 @@ def importPdf(pdfFile):
 	if os.path.isfile(pdfFile):
 		xmlIsOK, pdfXML = pdfToXml(pdfFile)
 		if xmlIsOK:
+			saveXMLToFile(pdfXML, os.path.splitext(pdfFile)[0]+'.xml', True)
 			authors = extractPdfxAuths(pdfXML)
 			title = extractPdfxTitle(pdfXML)
 			refs = extractPdfxRefs(pdfXML)
 			paper = Paper(authors, title, refs)
+		else:
+			print "Oops, there was a problem on PDFX"
+			print pdfXML
 	
 	return paper
+
+
 # This downloads the first pdf that comes from the search 
 # made by the title and stored into path, the pdf is named
 # by convention: '[author]-title.pdf'
 def fetchScholarPdf(title, path):
+	global QueryChrono
 
-	return False
+	print 'Fetching pdf from Scholar: %s' % title
+	querier = sch.ScholarQuerier()
+	settings = sch.ScholarSettings()
+
+	querier.apply_settings(settings)
+
+	query = sch.SearchScholarQuery()
+	query.set_phrase(title)
+	query.set_scope(True)
+
+	#Be good to Google and they will be good with you
+	print 'Calming the beast (waiting 60 [s])'
+	time.sleep(60)
+
+	querier.send_query(query)
+	
+	if len(querier.articles) < 1:
+		print 'Google Scholar did not find articles for %s'%title
+		return False
+
+	pdfURL = querier.articles[0]['url_pdf']
+	try:
+		print 'Trying to download from: %s' % pdfURL
+		downloadFile(pdfURL, path)
+	except:
+		print 'There was a problem while trying to downlaoad %s'%title
+		return False
+
+	return True
+
+def saveOutputGraph():
+	global TitleGraph
+	global OutputGraphName
+
+	nx.write_graphml(TitleGraph, OutputGraphName)
+
 
 def createPaperNode(paper, graph):
 	global SeekDepth
 	global CurNodeId
+	global SeekLevel
+
+	SeekLevel = SeekLevel + 1
 
 	setId = CurNodeId
 	CurNodeId = CurNodeId + 1
@@ -160,33 +248,42 @@ def createPaperNode(paper, graph):
 	print 'Adding node %d |  Author: %s  Tile: %s' %(setId, str(mainAuth), str(paper.title))
 	graph.add_node(setId, {'Authors':str(mainAuth), 'Title':str(paper.title)})
 	
+	saveOutputGraph()
+
+	if SeekLevel > SeekDepth:
+		return setId
+
 	for ref in paper.references:
 		mainAuth = ', '.join(ref.authors)
 		graph.add_node(CurNodeId, {'Authors':str(mainAuth), 'Title':str(ref.title)})
-		print 'Adding ref node - Auth: %s   Title: %s' %(mainAuth, ref.title)
-		graph.add_edge(setId, CurNodeId)
-		CurNodeId = CurNodeId + 1
 
-		'''
 		newPdfFile = formatPdfName(mainAuth, str(ref.title))
 		if fetchScholarPdf(ref.title, newPdfFile):
 			refPaper = importPdf(newPdfFile)
-			refId = createPaperNode(refPaper, graph)
-			graph.add_edge(setId, refId)
-		'''
+			if refPaper:
+				refId = createPaperNode(refPaper, graph)
+				graph.add_edge(setId, refId)
+				saveOutputGraph()
+			else:
+				print 'ERROR: while creating reference paper'
+		else:
+			print 'ERROR: Could not fetch PDF file from Scholar'
+
 	return setId
 
 ### Main ################################
 def main():
-	global SeekDepth
 	global PdfRepository
 	global TitleGraph
+	global QueryChrono
+
+	QueryChrono.start()
 
 	filePath = 'E:\\MCC\\CMU\\Research\\Papers\\Motion Analysis\\ChenMoSIFTCMU09.pdf'
 	firstPaper = importPdf(filePath)
 	createPaperNode(firstPaper, TitleGraph)
 
-	nx.write_graphml(TitleGraph, 'DevelTest.graphml')
+	saveOutputGraph()
 
 if __name__ == '__main__':
 	main()
